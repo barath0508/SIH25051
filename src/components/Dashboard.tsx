@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Sun,
   Wind,
@@ -24,6 +24,7 @@ import { AIPredictions } from './AIPredictions';
 import { VillageImpact } from './VillageImpact';
 import { MaintenanceAlerts } from './MaintenanceAlerts';
 import { WeatherForecast } from './WeatherForecast';
+import { SystemHealth } from './SystemHealth';
 
 const MICROGRID_ID = 'demo-microgrid-001';
 
@@ -35,6 +36,62 @@ export function Dashboard() {
   const [systemStatus, setSystemStatus] = useState<'online' | 'offline' | 'fault'>('online');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'warning' | 'error'}>>([]);
+  const [dataExportFormat, setDataExportFormat] = useState<'csv' | 'json'>('csv');
+
+  // Memoized calculations - moved before other hooks
+  const totalGeneration = useMemo(() => 
+    currentReading ? currentReading.solar.power + currentReading.wind.power : 0, 
+    [currentReading]
+  );
+  
+  const netPower = useMemo(() => 
+    currentReading ? totalGeneration - currentReading.load.power : 0, 
+    [totalGeneration, currentReading]
+  );
+  
+  const activeAlertCount = useMemo(() => 
+    alerts.filter(a => a.status === 'active').length, 
+    [alerts]
+  );
+
+  // Data export function
+  const exportData = useCallback(() => {
+    if (!currentReading) return;
+    
+    const data = {
+      timestamp: new Date().toISOString(),
+      current: currentReading,
+      recent: recentReadings,
+      alerts: alerts,
+      predictions: predictions
+    };
+    
+    if (dataExportFormat === 'csv') {
+      const csv = `Timestamp,Solar(kW),Wind(kW),Battery(%),Load(kW),Temperature(C)\n${recentReadings.map(r => 
+        `${new Date(r.timestamp).toISOString()},${(r.solar.power/1000).toFixed(2)},${(r.wind.power/1000).toFixed(2)},${r.battery.soc.toFixed(1)},${(r.load.power/1000).toFixed(2)},${r.ambientTemperature.toFixed(1)}`
+      ).join('\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `microgrid-data-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    } else {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `microgrid-data-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+    }
+    
+    setNotifications(prev => [...prev, {
+      id: Date.now().toString(),
+      message: `Data exported as ${dataExportFormat.toUpperCase()}`,
+      type: 'success'
+    }]);
+  }, [recentReadings, currentReading, alerts, predictions, dataExportFormat]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -49,13 +106,26 @@ export function Dashboard() {
             e.preventDefault();
             setShowKeyboardShortcuts(!showKeyboardShortcuts);
             break;
+          case 'e':
+            e.preventDefault();
+            exportData();
+            break;
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [isFullscreen, showKeyboardShortcuts]);
+  }, [isFullscreen, showKeyboardShortcuts, recentReadings, currentReading, alerts, predictions, dataExportFormat]);
+
+  // Auto-dismiss notifications
+  useEffect(() => {
+    notifications.forEach(notification => {
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      }, 3000);
+    });
+  }, [notifications]);
 
   useEffect(() => {
     const unsubscribeReading = simulationService.onReading((reading) => {
@@ -117,10 +187,6 @@ export function Dashboard() {
     );
   }
 
-  const totalGeneration = currentReading.solar.power + currentReading.wind.power;
-  const netPower = totalGeneration - currentReading.load.power;
-  const activeAlertCount = alerts.filter(a => a.status === 'active').length;
-
   const statusConfig = {
     online: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'Neural Grid Online', glow: 'shadow-emerald-500/50' },
     offline: { color: 'text-slate-400', bg: 'bg-slate-500/20', label: 'System Offline', glow: 'shadow-slate-500/50' },
@@ -171,12 +237,30 @@ export function Dashboard() {
                   </span>
                 </div>
               )}
-              <button 
-                className="p-2 sm:p-3 glass-dark rounded-lg sm:rounded-xl hover:bg-white/10 transition-all duration-300 group"
-                aria-label="Settings"
-              >
-                <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300 group-hover:rotate-90 transition-transform duration-300" />
-              </button>
+              <div className="flex items-center gap-2">
+                <select 
+                  value={dataExportFormat} 
+                  onChange={(e) => setDataExportFormat(e.target.value as 'csv' | 'json')}
+                  className="text-xs bg-slate-800 text-white border border-white/20 rounded px-2 py-1 hidden sm:block"
+                >
+                  <option value="csv">CSV</option>
+                  <option value="json">JSON</option>
+                </select>
+                <button 
+                  onClick={exportData}
+                  className="p-2 sm:p-3 glass-dark rounded-lg sm:rounded-xl hover:bg-white/10 transition-all duration-300 group"
+                  aria-label="Export Data"
+                  title="Export Data (Ctrl+E)"
+                >
+                  <span className="text-xs sm:text-sm text-purple-300 group-hover:text-white transition-colors">📊</span>
+                </button>
+                <button 
+                  className="p-2 sm:p-3 glass-dark rounded-lg sm:rounded-xl hover:bg-white/10 transition-all duration-300 group"
+                  aria-label="Settings"
+                >
+                  <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300 group-hover:rotate-90 transition-transform duration-300" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -412,6 +496,11 @@ export function Dashboard() {
           <WeatherForecast />
         </div>
 
+        {/* System Health */}
+        <div className="mb-8">
+          <SystemHealth reading={currentReading} recentReadings={recentReadings} />
+        </div>
+
         {alerts.length > 0 && (
           <Card>
             <CardHeader>
@@ -460,6 +549,10 @@ export function Dashboard() {
                   <kbd className="px-2 py-1 bg-slate-700 text-white rounded text-xs">Ctrl + ?</kbd>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-purple-200">Export Data</span>
+                  <kbd className="px-2 py-1 bg-slate-700 text-white rounded text-xs">Ctrl + E</kbd>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-purple-200">Refresh Data</span>
                   <kbd className="px-2 py-1 bg-slate-700 text-white rounded text-xs">F5</kbd>
                 </div>
@@ -467,6 +560,30 @@ export function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* Notifications */}
+        <div className="fixed top-20 right-4 z-50 space-y-2">
+          {notifications.map(notification => (
+            <div key={notification.id} className={`glass-dark px-4 py-3 rounded-lg border animate-slide-in ${
+              notification.type === 'success' ? 'border-emerald-500/50 bg-emerald-500/10' :
+              notification.type === 'warning' ? 'border-amber-500/50 bg-amber-500/10' :
+              'border-red-500/50 bg-red-500/10'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">
+                  {notification.type === 'success' ? '✓' : notification.type === 'warning' ? '⚠' : '✗'}
+                </span>
+                <span className={`text-sm font-medium ${
+                  notification.type === 'success' ? 'text-emerald-300' :
+                  notification.type === 'warning' ? 'text-amber-300' :
+                  'text-red-300'
+                }`}>
+                  {notification.message}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* Performance indicator */}
         <div className="fixed bottom-4 right-4 glass-dark px-3 py-2 rounded-lg border border-white/10 z-40">
