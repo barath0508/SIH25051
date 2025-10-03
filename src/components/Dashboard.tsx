@@ -25,6 +25,8 @@ import { VillageImpact } from './VillageImpact';
 import { MaintenanceAlerts } from './MaintenanceAlerts';
 import { WeatherForecast } from './WeatherForecast';
 import { SystemHealth } from './SystemHealth';
+import { EnergyOptimizer } from './EnergyOptimizer';
+import { CommunityHub } from './CommunityHub';
 
 const MICROGRID_ID = 'demo-microgrid-001';
 
@@ -175,8 +177,8 @@ export function Dashboard() {
             <Activity className="w-20 h-20 text-purple-400 mx-auto mb-6 animate-pulse-slow" />
             <div className="absolute inset-0 w-20 h-20 mx-auto rounded-full bg-purple-400/20 animate-ping" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4 gradient-text">Initializing Neural Grid</h2>
-          <p className="text-purple-200 text-lg">Establishing quantum connections...</p>
+          <h2 className="text-3xl font-bold text-white mb-4 gradient-text">Initializing EcoPulse</h2>
+          <p className="text-purple-200 text-lg">Connecting to renewable energy sources...</p>
           <div className="mt-6 flex justify-center space-x-2">
             <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
             <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
@@ -188,7 +190,7 @@ export function Dashboard() {
   }
 
   const statusConfig = {
-    online: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'Neural Grid Online', glow: 'shadow-emerald-500/50' },
+    online: { color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'EcoPulse Online', glow: 'shadow-emerald-500/50' },
     offline: { color: 'text-slate-400', bg: 'bg-slate-500/20', label: 'System Offline', glow: 'shadow-slate-500/50' },
     fault: { color: 'text-red-400', bg: 'bg-red-500/20', label: 'Critical Alert', glow: 'shadow-red-500/50' }
   };
@@ -215,8 +217,8 @@ export function Dashboard() {
                 <div className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-3 h-3 sm:w-4 sm:h-4 bg-emerald-400 rounded-full animate-pulse" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-3xl font-bold text-white mb-0.5 sm:mb-1">QuantumGrid</h1>
-                <p className="text-xs sm:text-sm text-purple-200 font-medium hidden sm:block">Neural Energy Management System</p>
+                <h1 className="text-xl sm:text-3xl font-bold text-white mb-0.5 sm:mb-1">EcoPulse</h1>
+                <p className="text-xs sm:text-sm text-purple-200 font-medium hidden sm:block">Smart Energy Management System</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-6">
@@ -400,7 +402,7 @@ export function Dashboard() {
                   <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
                     <TrendingUp className="w-5 h-5 text-white" />
                   </div>
-                  <CardTitle>Neural Flow Analytics</CardTitle>
+                  <CardTitle>EcoPulse Analytics</CardTitle>
                 </div>
                 <div className="flex items-center gap-2 text-purple-300">
                   <Sparkles className="w-4 h-4" />
@@ -501,6 +503,12 @@ export function Dashboard() {
           <SystemHealth reading={currentReading} recentReadings={recentReadings} />
         </div>
 
+        {/* Advanced Features */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <EnergyOptimizer reading={currentReading} />
+          <CommunityHub />
+        </div>
+
         {alerts.length > 0 && (
           <Card>
             <CardHeader>
@@ -509,7 +517,7 @@ export function Dashboard() {
                   <div className="p-2 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg">
                     <AlertCircle className="w-5 h-5 text-white" />
                   </div>
-                  <CardTitle>Neural Alerts</CardTitle>
+                  <CardTitle>EcoPulse Alerts</CardTitle>
                 </div>
                 <span className="text-sm text-purple-300 font-medium">
                   {activeAlertCount} active signals
@@ -585,13 +593,23 @@ export function Dashboard() {
           ))}
         </div>
 
-        {/* Performance indicator */}
-        <div className="fixed bottom-4 right-4 glass-dark px-3 py-2 rounded-lg border border-white/10 z-40">
-          <div className="flex items-center gap-2 text-xs">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            <span className="text-emerald-300 font-medium">
-              {recentReadings.length > 0 ? `${recentReadings.length}/30 samples` : 'Connecting...'}
-            </span>
+        {/* Enhanced Performance Panel */}
+        <div className="fixed bottom-4 right-4 z-40 space-y-2">
+          <div className="glass-dark px-3 py-2 rounded-lg border border-white/10">
+            <div className="flex items-center gap-2 text-xs">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="text-emerald-300 font-medium">
+                {recentReadings.length > 0 ? `${recentReadings.length}/30 samples` : 'Connecting...'}
+              </span>
+            </div>
+          </div>
+          <div className="glass-dark px-3 py-2 rounded-lg border border-white/10">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-purple-300">Efficiency:</span>
+              <span className="text-white font-bold">
+                {currentReading ? ((totalGeneration / currentReading.load.power) * 100).toFixed(0) : 0}%
+              </span>
+            </div>
           </div>
         </div>
       </main>
