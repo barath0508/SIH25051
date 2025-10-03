@@ -10,7 +10,8 @@ import {
   Settings,
   Power,
   Sparkles,
-  Shield
+  Shield,
+  Thermometer
 } from 'lucide-react';
 import type { SensorReading, Alert, AIPrediction } from '../types';
 import { simulationService } from '../services/simulationService';
@@ -20,6 +21,9 @@ import { AlertBadge } from './AlertBadge';
 import { EnergyChart } from './EnergyChart';
 import { BatteryAnalytics } from './BatteryAnalytics';
 import { AIPredictions } from './AIPredictions';
+import { VillageImpact } from './VillageImpact';
+import { MaintenanceAlerts } from './MaintenanceAlerts';
+import { WeatherForecast } from './WeatherForecast';
 
 const MICROGRID_ID = 'demo-microgrid-001';
 
@@ -179,32 +183,86 @@ export function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10">
-        {/* Quick Stats Summary */}
-        <div className="mb-6 sm:mb-8 glass-dark p-4 rounded-xl border border-white/10">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-white">System Overview</h2>
-            <div className="text-sm text-purple-300">
-              Last updated: {new Date(currentReading.timestamp).toLocaleTimeString()}
+        {/* Village Microgrid Overview */}
+        <div className="mb-6 sm:mb-8 glass-dark p-4 sm:p-6 rounded-xl border border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-white">Village Energy Status</h2>
+                <p className="text-xs text-purple-200">Renewable Microgrid • Population: ~500</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-purple-300">
+                {new Date(currentReading.timestamp).toLocaleTimeString()}
+              </div>
+              <div className="text-xs text-emerald-300">₹{((totalGeneration * 0.005) / 1000 * 24).toFixed(0)} saved today</div>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-emerald-400">{((currentReading.solar.power + currentReading.wind.power) / 1000).toFixed(1)}</div>
-              <div className="text-xs text-purple-200">Total Generation (kW)</div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="glass-dark p-3 rounded-lg text-center">
+              <div className="text-xl sm:text-2xl font-bold text-emerald-400">{((currentReading.solar.power + currentReading.wind.power) / 1000).toFixed(1)}</div>
+              <div className="text-xs text-purple-200">Clean Energy (kW)</div>
+              <div className="text-xs text-emerald-300 mt-1">🌱 {(((currentReading.solar.power + currentReading.wind.power) / 1000) * 0.82).toFixed(1)}kg CO₂ saved</div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-violet-400">{(currentReading.load.power / 1000).toFixed(1)}</div>
-              <div className="text-xs text-purple-200">Current Load (kW)</div>
+            <div className="glass-dark p-3 rounded-lg text-center">
+              <div className="text-xl sm:text-2xl font-bold text-violet-400">{(currentReading.load.power / 1000).toFixed(1)}</div>
+              <div className="text-xs text-purple-200">Village Load (kW)</div>
+              <div className="text-xs text-blue-300 mt-1">~{Math.round((currentReading.load.power / 1000) / 0.5)} homes powered</div>
             </div>
-            <div>
-              <div className={`text-2xl font-bold ${netPower >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <div className="glass-dark p-3 rounded-lg text-center">
+              <div className={`text-xl sm:text-2xl font-bold ${netPower >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {netPower >= 0 ? '+' : ''}{(netPower / 1000).toFixed(1)}
               </div>
               <div className="text-xs text-purple-200">Net Power (kW)</div>
+              <div className={`text-xs mt-1 ${netPower >= 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                {netPower >= 0 ? '⚡ Surplus' : '🔋 Using Battery'}
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-400">{currentReading.battery.soc.toFixed(0)}%</div>
-              <div className="text-xs text-purple-200">Battery Level</div>
+            <div className="glass-dark p-3 rounded-lg text-center">
+              <div className="text-xl sm:text-2xl font-bold text-blue-400">{currentReading.battery.soc.toFixed(0)}%</div>
+              <div className="text-xs text-purple-200">Energy Reserve</div>
+              <div className="text-xs text-cyan-300 mt-1">
+                ~{Math.round((currentReading.battery.soc / 100) * 8)}h backup
+              </div>
+            </div>
+          </div>
+
+          {/* Weather & Environmental */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+              <div className="flex items-center gap-2">
+                <Sun className="w-4 h-4 text-amber-400" />
+                <div>
+                  <div className="text-sm font-bold text-white">Clear Sky</div>
+                  <div className="text-xs text-purple-200">Solar Optimal</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Wind className="w-4 h-4 text-cyan-400" />
+                <div>
+                  <div className="text-sm font-bold text-white">{currentReading.wind.speed.toFixed(1)} m/s</div>
+                  <div className="text-xs text-purple-200">Wind Speed</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Thermometer className="w-4 h-4 text-orange-400" />
+                <div>
+                  <div className="text-sm font-bold text-white">{currentReading.ambientTemperature.toFixed(0)}°C</div>
+                  <div className="text-xs text-purple-200">Temperature</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <div>
+                  <div className="text-sm font-bold text-emerald-300">99.2%</div>
+                  <div className="text-xs text-purple-200">Uptime</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -341,6 +399,17 @@ export function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <BatteryAnalytics reading={currentReading} />
           <AIPredictions predictions={predictions} />
+        </div>
+
+        {/* Village-Specific Features */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <VillageImpact reading={currentReading} recentReadings={recentReadings} />
+          <MaintenanceAlerts reading={currentReading} />
+        </div>
+
+        {/* Weather Planning */}
+        <div className="mb-8">
+          <WeatherForecast />
         </div>
 
         {alerts.length > 0 && (
